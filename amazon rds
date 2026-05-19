@@ -1,0 +1,123 @@
+Create Terraform File  
+vi main.tf
+
+Paste this full code
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+# Default VPC
+resource "aws_default_vpc" "default" {
+}
+
+# Default Subnet 1
+resource "aws_default_subnet" "subnet1" {
+  availability_zone = "us-east-1a"
+}
+
+# Default Subnet 2
+resource "aws_default_subnet" "subnet2" {
+  availability_zone = "us-east-1b"
+}
+
+# Security Group
+resource "aws_security_group" "rds_sg" {
+  name   = "rds-security-group"
+  vpc_id = aws_default_vpc.default.id
+
+  ingress {
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# DB Subnet Group
+resource "aws_db_subnet_group" "default" {
+  name = "my-db-subnet-group"
+
+  subnet_ids = [
+    aws_default_subnet.subnet1.id,
+    aws_default_subnet.subnet2.id
+  ]
+
+  tags = {
+    Name = "My DB subnet group"
+  }
+}
+
+# RDS MySQL Instance
+resource "aws_db_instance" "myrds" {
+  identifier             = "my-rds-instance"
+  allocated_storage      = 20
+  storage_type           = "gp2"
+  engine                 = "mysql"
+  engine_version         = "8.0"
+  instance_class         = "db.t3.micro"
+
+  username               = "admin"
+  password               = "Admin12345"
+
+  publicly_accessible    = true
+  skip_final_snapshot    = true
+
+  db_subnet_group_name   = aws_db_subnet_group.default.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+
+  tags = {
+    Name = "MyRDS"
+  }
+}
+
+save and exit 
+:wq
+
+terraform init
+Expected:
+
+Terraform has been successfully initialized!
+
+terraform validate
+Expected:
+
+Success! The configuration is valid.
+
+terraform plan
+Terraform shows:
+
+what resources will be created
+cost-impact estimate
+
+terraform apply
+Now Terraform starts creating:
+
+VPC resources
+Security Group
+Subnets
+RDS instance
+
+
+now verify in amazon console
+my-rds-instance we will get to see
+
+terraform destroy
+
+
+
